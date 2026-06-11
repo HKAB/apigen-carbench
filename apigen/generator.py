@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from .llm_client import LLMClient
 from .prompts import build_messages
-from .schemas import APIDef, GeneratorOutput, QAPair, QueryStyle
+from .schemas import APIDef, GeneratorOutput, Persona, QAPair, QueryStyle
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
@@ -66,7 +66,8 @@ class QueryAnswerGenerator:
         seeds: list[QAPair],
         style: QueryStyle,
         num_pairs: int = 3,
+        persona: Persona | None = None,
     ) -> list[GeneratorOutput]:
-        messages = build_messages(style, apis, seeds, num_pairs)
+        messages = build_messages(style, apis, seeds, num_pairs, persona=persona)
         text = await self._client.chat(self._model, messages, self._temperature)
         return parse_generator_output(text)

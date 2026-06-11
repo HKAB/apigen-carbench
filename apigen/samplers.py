@@ -1,16 +1,21 @@
 """Sampling system for dataset diversity.
 
-API Sampler, Seed QA Sampler, and Prompt Sampler. The number of APIs and seed
-examples per iteration is randomly chosen within a configured range to avoid
-repetitive patterns (the paper's Sampling Diversity).
+API Sampler, Seed QA Sampler, Prompt Sampler, and Persona Sampler. The number
+of APIs and seed examples per iteration is randomly chosen within a configured
+range to avoid repetitive patterns (the paper's Sampling Diversity).
+
+PersonaSampler draws rows from the nvidia/Nemotron-Personas-Vietnam dataset so
+each generation batch is narrated from a distinct Vietnamese user perspective.
 """
 
 from __future__ import annotations
 
+import json
 import random
+from pathlib import Path
 from typing import get_args
 
-from .schemas import APIDef, QAPair, QueryStyle
+from .schemas import APIDef, Persona, QAPair, QueryStyle
 
 ALL_STYLES: tuple[QueryStyle, ...] = get_args(QueryStyle)
 
@@ -59,3 +64,86 @@ class PromptSampler:
 
     def sample(self) -> QueryStyle:
         return self._rng.choice(self._styles)
+
+
+class PersonaSampler:
+    """Sample personas from the nvidia/Nemotron-Personas-Vietnam dataset.
+
+    Typical usage — load once, then call ``sample()`` per generation batch:
+
+    .. code-block:: python
+
+        sampler = PersonaSampler.from_huggingface()          # HuggingFace
+        sampler = PersonaSampler.from_jsonl("personas.jsonl")  # local file
+        persona = sampler.sample()
+    """
+
+    def __init__(self, personas: list[Persona], rng: random.Random | None = None) -> None:
+        if not personas:
+            raise ValueError("PersonaSampler requires at least one persona.")
+        self._personas = personas
+        self._rng = rng or random.Random()
+
+    def sample(self) -> Persona:
+        """Return one persona drawn uniformly at random."""
+        return self._rng.choice(self._personas)
+
+    # ── Loaders ──────────────────────────────────────────────────────────────
+
+    @classmethod
+    def from_huggingface(
+        cls,
+        dataset_name: str = "nvidia/Nemotron-Personas-Vietnam",
+        split: str = "train",
+        max_personas: int | None = None,
+        rng: random.Random | None = None,
+    ) -> "PersonaSampler":
+        """Load personas directly from the HuggingFace Hub.
+
+        Requires the ``datasets`` package::
+
+            pip install datasets
+        """
+        try:
+            from datasets import load_dataset  # type: ignore[import]
+        except ImportError as exc:
+            raise ImportError(
+                "Install the 'datasets' package to load personas from HuggingFace: "
+                "pip install datasets"
+            ) from exc
+
+        ds = load_dataset(dataset_name, split=split)
+        if max_personas is not None:
+            ds = ds.select(range(min(max_personas, len(ds))))
+        personas = [Persona.model_validate(dict(row)) for row in ds]
+        return cls(personas, rng=rng)
+
+    @classmethod
+    def from_jsonl(
+        cls,
+        path: str | Path,
+        max_personas: int | None = None,
+        rng: random.Random | None = None,
+    ) -> "PersonaSampler":
+        """Load personas from a local JSONL file (one JSON object per line)."""
+        rows: list[dict] = []
+        with Path(path).open(encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                rows.append(json.loads(line))
+                if max_personas is not None and len(rows) >= max_personas:
+                    break
+        personas = [Persona.model_validate(row) for row in rows]
+        return cls(personas, rng=rng)
+
+    @classmethod
+    def from_list(
+        cls,
+        records: list[dict],
+        rng: random.Random | None = None,
+    ) -> "PersonaSampler":
+        """Load personas from an already-parsed list of dicts (e.g. from JSON)."""
+        personas = [Persona.model_validate(r) for r in records]
+        return cls(personas, rng=rng)

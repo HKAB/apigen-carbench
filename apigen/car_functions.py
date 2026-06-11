@@ -149,6 +149,135 @@ def find_charging_station(state: VehicleState, *, radius_km: float = 10.0) -> di
     }
 
 
+def vinfast_knowledge_base(
+    state: VehicleState,
+    *,
+    key_word: str | None = None,
+    rewrite_message: str | None = None,
+    car_model_name: str | None = None,
+    queries: str | None = None,
+) -> dict[str, Any]:
+    """Stub – PURPOSE"""
+    return {
+        "status": "ok",
+        "key_word": key_word,
+        "rewrite_message": rewrite_message,
+        "car_model_name": car_model_name,
+        "queries": queries,
+    }
+
+def weather_tool(state: VehicleState, *, rewrite_message: str | None = None) -> dict[str, Any]:
+    """Stub – This tool is useful when you need to answer questions about the weather, implied weather-related questions, or indicator"""
+    return {
+        "status": "ok",
+        "rewrite_message": rewrite_message,
+    }
+
+def movie_tool(
+    state: VehicleState,
+    *,
+    movie_name: str | None = None,
+    cinema: str | None = None,
+    movie_time: str | None = None,
+    movie_book_tickets: bool | None = None,
+    movie_information: bool | None = None,
+    movie_genres: str | None = None,
+    rewrite_message: str | None = None,
+) -> dict[str, Any]:
+    """Stub – Use this function to retrieve or explore any kind of information related to movies. This includes but is not limited to:"""
+
+    # movie_genres: one of 'Hành động', 'Kinh dị', 'Gia Đình', 'Hài', 'Tình cảm', 'Tâm lý', 'Viễn tưởng', 'Giả Tưởng', 'Ca nhạc', 'Tài Liệu', 'Khác'
+    return {
+        "status": "ok",
+        "movie_name": movie_name,
+        "cinema": cinema,
+        "movie_time": movie_time,
+        "movie_book_tickets": movie_book_tickets,
+    }
+
+def cooking_search(
+    state: VehicleState,
+    *,
+    rewrite_message: str | None = None,
+    location: str | None = None,
+    queries: str | None = None,
+) -> dict[str, Any]:
+    """Stub – Useful for answering questions about general dishes and menus (EXCEPT local specialties of a country/region), including """
+    return {
+        "status": "ok",
+        "rewrite_message": rewrite_message,
+        "location": location,
+        "queries": queries,
+    }
+
+def Vehicle_faults_and_operating_tips(
+    state: VehicleState,
+    *,
+    action: str | None = None,
+    object: str | None = None,
+    number: float | None = None,
+    key_word: str | None = None,
+    rewrite_message: str | None = None,
+    car_model_name: str | None = None,
+    queries: str | None = None,
+) -> dict[str, Any]:
+    """Stub – Purpose - Diagnose real-world vehicle issues and provide troubleshooting / remedial advice."""
+
+    # action: one of 'check_issues', 'check', 'kb_action', 'check_distance'
+    # object: one of 'BATTERY', 'TIRE_PRESSURE'
+    return {
+        "status": "ok",
+        "action": action,
+        "object": object,
+        "number": number,
+        "key_word": key_word,
+    }
+
+def Frs_tool(
+    state: VehicleState,
+    *,
+    rewrite_message: str | None = None,
+    car_model_name: str | None = None,
+    queries: str | None = None,
+    new_frs: bool | None = None,
+) -> dict[str, Any]:
+    """Stub – Purpose - Provide software-version, firmware version, fota version information: release history, newly added functions, """
+    return {
+        "status": "ok",
+        "rewrite_message": rewrite_message,
+        "car_model_name": car_model_name,
+        "queries": queries,
+        "new_frs": new_frs,
+    }
+
+def tourism_search(
+    state: VehicleState,
+    *,
+    rewrite_message: str | None = None,
+    location: str | None = None,
+    queries: str | None = None,
+) -> dict[str, Any]:
+    """Stub – useful for when you need to answer questions about travel: unique or popular restaurants & dishes, local specialties, si"""
+    return {
+        "status": "ok",
+        "rewrite_message": rewrite_message,
+        "location": location,
+        "queries": queries,
+    }
+
+def zodiac_search(state: VehicleState, *, rewrite_message: str | None = None) -> dict[str, Any]:
+    """Stub – Useful for answering questions related to zodiac signs, including general information (such as birth dates, personality """
+    return {
+        "status": "ok",
+        "rewrite_message": rewrite_message,
+    }
+
+def vingroup_knowledge_base(state: VehicleState) -> dict[str, Any]:
+    """Stub – Một công cụ chuyên về tập đoàn Vingroup, hữu ích khi đầu vào đề cập đến bất cứ điều gì liên quan đến Vingroup và các côn"""
+    return {
+        "status": "ok",
+    }
+
 # name -> callable. Keys must match data/apis/car_apis.json.
 CAR_FUNCTIONS = {
     "set_climate_temperature": set_climate_temperature,
@@ -163,4 +292,13 @@ CAR_FUNCTIONS = {
     "set_drive_mode": set_drive_mode,
     "toggle_defroster": toggle_defroster,
     "find_charging_station": find_charging_station,
+    "vinfast_knowledge_base": vinfast_knowledge_base,
+    "weather_tool": weather_tool,
+    "movie_tool": movie_tool,
+    "cooking_search": cooking_search,
+    "Vehicle_faults_and_operating_tips": Vehicle_faults_and_operating_tips,
+    "Frs_tool": Frs_tool,
+    "tourism_search": tourism_search,
+    "zodiac_search": zodiac_search,
+    "vingroup_knowledge_base": vingroup_knowledge_base,
 }

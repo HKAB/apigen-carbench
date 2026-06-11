@@ -73,6 +73,43 @@ class QAPair(BaseModel):
         return GeneratorOutput(query=self.query, answers=self.answers)
 
 
+class Persona(BaseModel):
+    """One row from nvidia/Nemotron-Personas-Vietnam (21 fields).
+
+    All narrative/string fields are optional so the model tolerates
+    partially-filled rows that may appear in the dataset.
+    """
+
+    model_config = ConfigDict(extra="ignore")  # ignore unknown keys from HF rows
+
+    # ── Identifiers ────────────────────────────────────────────────────────
+    uuid: str = ""
+
+    # ── 6 Persona narratives ───────────────────────────────────────────────
+    professional_persona: str | None = None
+    sports_persona: str | None = None
+    arts_persona: str | None = None
+    travel_persona: str | None = None
+    culinary_persona: str | None = None
+    persona: str | None = None
+
+    # ── 15 Contextual / demographic fields ────────────────────────────────
+    cultural_background: str | None = None
+    skills_and_expertise: str | None = None
+    skills_and_expertise_list: str | None = None
+    hobbies_and_interests: str | None = None
+    hobbies_and_interests_list: str | None = None
+    career_goals_and_ambitions: str | None = None
+    sex: str | None = None                 # Nam / Nữ
+    age: int | None = None                 # 18–90
+    marital_status: str | None = None      # Độc thân / Đã kết hôn / Góa / Ly thân
+    education_level: str | None = None
+    occupation: str | None = None
+    zone: str | None = None                # Đô Thị / Nông Thôn
+    region: str | None = None              # one of 6 provinces/cities
+    country: str | None = None             # Việt Nam (constant)
+
+
 class VerifyResult(BaseModel):
     """Outcome of running a data point through the verification pipeline."""
 

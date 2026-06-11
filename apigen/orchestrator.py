@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 
 from .feedback import FeedbackLoop
 from .generator import QueryAnswerGenerator
-from .samplers import ApiSampler, PromptSampler, SeedQASampler
+from .samplers import ApiSampler, PersonaSampler, PromptSampler, SeedQASampler
 from .schemas import GeneratorOutput, QAPair
 from .verification.pipeline import VerificationPipeline
 
@@ -60,6 +60,7 @@ class Orchestrator:
         feedback: FeedbackLoop,
         concurrency: int = 8,
         pairs_per_batch: int = 3,
+        persona_sampler: PersonaSampler | None = None,
     ):
         self._generator = generator
         self._pipeline = pipeline
@@ -70,6 +71,7 @@ class Orchestrator:
         self._concurrency = max(1, concurrency)
         self._sem = asyncio.Semaphore(self._concurrency)
         self._pairs_per_batch = pairs_per_batch
+        self._persona_sampler = persona_sampler  # None → no persona injection
         self.stats = Stats()
         self._lock = asyncio.Lock()
 
@@ -81,7 +83,11 @@ class Orchestrator:
             if not apis:
                 return []
             seeds = self._seed_sampler.sample(style)
-            items = await self._generator.generate(apis, seeds, style, self._pairs_per_batch)
+            # Sample a fresh persona per batch for maximum query diversity.
+            persona = self._persona_sampler.sample() if self._persona_sampler else None
+            items = await self._generator.generate(
+                apis, seeds, style, self._pairs_per_batch, persona=persona
+            )
 
         accepted: list[QAPair] = []
         for item in items:
