@@ -57,10 +57,10 @@ class Orchestrator:
         api_sampler: ApiSampler,
         seed_sampler: SeedQASampler,
         prompt_sampler: PromptSampler,
+        persona_sampler: PersonaSampler,
         feedback: FeedbackLoop,
         concurrency: int = 8,
         pairs_per_batch: int = 3,
-        persona_sampler: PersonaSampler | None = None,
     ):
         self._generator = generator
         self._pipeline = pipeline

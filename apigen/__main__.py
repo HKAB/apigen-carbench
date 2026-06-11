@@ -15,7 +15,7 @@ from .feedback import FeedbackLoop
 from .generator import QueryAnswerGenerator
 from .llm_client import AiohttpLLMClient
 from .orchestrator import Orchestrator
-from .samplers import ApiSampler, PromptSampler, SeedQASampler
+from .samplers import ApiSampler, PromptSampler, SeedQASampler, PersonaSampler
 from .schemas import QAPair
 from .verification import (
     ExecutionChecker,
@@ -42,6 +42,7 @@ def _build(settings: Settings, client, seed: int | None):
     generator = QueryAnswerGenerator(
         client, settings.generator_model_name, settings.generation_temperature
     )
+    persona_sampler = PersonaSampler.from_huggingface()
     backend = PythonExecutionBackend()
     pipeline = VerificationPipeline(
         FormatChecker(library),
@@ -56,6 +57,7 @@ def _build(settings: Settings, client, seed: int | None):
         api_sampler,
         seed_sampler,
         prompt_sampler,
+        persona_sampler,
         feedback,
         concurrency=settings.concurrency,
     )
