@@ -157,21 +157,48 @@ def vinfast_knowledge_base(
     car_model_name: str | None = None,
     queries: str | None = None,
 ) -> dict[str, Any]:
-    """Stub – PURPOSE"""
+    """Simulated downstream KB response for VinFast-related queries."""
+    topic = (queries or key_word or rewrite_message or "thông tin tổng quan").strip()
+    model = (car_model_name or "VinFast").strip()
+    response = (
+        f"Đã tra cứu kiến thức VinFast cho '{topic}' ({model}). "
+        "Gợi ý: kiểm tra hướng dẫn sử dụng, lịch bảo dưỡng định kỳ và bản cập nhật phần mềm mới nhất."
+    )
     return {
         "status": "ok",
-        "key_word": key_word,
-        "rewrite_message": rewrite_message,
-        "car_model_name": car_model_name,
-        "queries": queries,
+        "response": response,
+        "topic": topic,
+        "car_model_name": model,
+        "insights": [
+            "Bảo dưỡng định kỳ giúp tối ưu hiệu suất pin/động cơ.",
+            "Nên cập nhật phần mềm khi xe ở trạng thái đỗ an toàn.",
+            "Theo dõi cảnh báo trên cụm đồng hồ để xử lý sớm.",
+        ],
     }
 
+
 def weather_tool(state: VehicleState, *, rewrite_message: str | None = None) -> dict[str, Any]:
-    """Stub – This tool is useful when you need to answer questions about the weather, implied weather-related questions, or indicator"""
+    """Simulated weather service response."""
+    msg = (rewrite_message or "").strip()
+    signal = len(msg) if msg else 17
+    temp_c = 24 + (signal % 8)
+    rain_prob = (signal * 9) % 100
+    condition = "nhiều mây" if rain_prob >= 40 else "trời quang"
+    response = (
+        f"Nhiệt độ hiện tại khoảng {temp_c}°C, {condition}, "
+        f"khả năng có mưa là {rain_prob}%."
+    )
     return {
         "status": "ok",
-        "rewrite_message": rewrite_message,
+        "response": response,
+        "forecast": {
+            "temperature_c": temp_c,
+            "condition": condition,
+            "rain_probability_percent": rain_prob,
+        },
+        # "rewrite_message": rewrite_message,
     }
+
 
 def movie_tool(
     state: VehicleState,
@@ -184,16 +211,37 @@ def movie_tool(
     movie_genres: str | None = None,
     rewrite_message: str | None = None,
 ) -> dict[str, Any]:
-    """Stub – Use this function to retrieve or explore any kind of information related to movies. This includes but is not limited to:"""
+    """Simulated movie search/booking response."""
+    name = movie_name or "phim đang chiếu"
+    cin = cinema or "rạp gần bạn"
+    show_time = movie_time or "20:00"
+    genre = movie_genres or "Khác"
 
-    # movie_genres: one of 'Hành động', 'Kinh dị', 'Gia Đình', 'Hài', 'Tình cảm', 'Tâm lý', 'Viễn tưởng', 'Giả Tưởng', 'Ca nhạc', 'Tài Liệu', 'Khác'
+    if movie_book_tickets:
+        response = f"Đã giữ chỗ tạm thời cho '{name}' tại {cin}, suất {show_time}. Vui lòng xác nhận thanh toán."
+        status = "booking_pending"
+    elif movie_information:
+        response = (
+            f"'{name}' ({genre}) hiện có lịch chiếu tại {cin} vào {show_time}. "
+            "Đánh giá khán giả: 8.2/10, thời lượng dự kiến: 118 phút."
+        )
+        status = "ok"
+    else:
+        response = f"Tìm thấy lịch chiếu phù hợp cho '{name}' tại {cin} vào {show_time}."
+        status = "ok"
+
     return {
-        "status": "ok",
-        "movie_name": movie_name,
-        "cinema": cinema,
-        "movie_time": movie_time,
-        "movie_book_tickets": movie_book_tickets,
+        "status": status,
+        "response": response,
+        "movie_name": name,
+        "cinema": cin,
+        "movie_time": show_time,
+        "movie_genres": genre,
+        "movie_book_tickets": bool(movie_book_tickets),
+        "movie_information": bool(movie_information),
+        # "rewrite_message": rewrite_message,
     }
+
 
 def cooking_search(
     state: VehicleState,
@@ -202,13 +250,19 @@ def cooking_search(
     location: str | None = None,
     queries: str | None = None,
 ) -> dict[str, Any]:
-    """Stub – Useful for answering questions about general dishes and menus (EXCEPT local specialties of a country/region), including """
+    """Simulated cooking and dish suggestion response."""
+    area = location or "khu vực của bạn"
+    q = queries or rewrite_message or "món dễ nấu"
+    dishes = ["Cơm chiên hải sản", "Canh nấm đậu hũ", "Gà áp chảo sốt tiêu đen"]
+    response = f"Dựa trên yêu cầu '{q}', gợi ý 3 món phù hợp tại {area}: {', '.join(dishes)}."
     return {
         "status": "ok",
-        "rewrite_message": rewrite_message,
-        "location": location,
-        "queries": queries,
+        "response": response,
+        "location": area,
+        "queries": q,
+        "suggested_dishes": dishes,
     }
+
 
 def Vehicle_faults_and_operating_tips(
     state: VehicleState,
@@ -221,17 +275,43 @@ def Vehicle_faults_and_operating_tips(
     car_model_name: str | None = None,
     queries: str | None = None,
 ) -> dict[str, Any]:
-    """Stub – Purpose - Diagnose real-world vehicle issues and provide troubleshooting / remedial advice."""
+    """Simulated diagnostics and operation-tips response."""
+    model = car_model_name or "VinFast"
+    target = object or "GENERAL"
+    act = action or "check_issues"
 
-    # action: one of 'check_issues', 'check', 'kb_action', 'check_distance'
-    # object: one of 'BATTERY', 'TIRE_PRESSURE'
+    if target == "BATTERY":
+        response = (
+            f"{model}: Hệ thống pin đang ở mức an toàn. "
+            "Khuyến nghị giữ pin trong khoảng 20%–80% cho sử dụng hằng ngày."
+        )
+        recommendations = ["Hạn chế sạc nhanh liên tục", "Kiểm tra cổng sạc định kỳ"]
+    elif target == "TIRE_PRESSURE":
+        psi = number if number is not None else 32
+        response = (
+            f"{model}: Áp suất lốp hiện tại khoảng {psi} PSI. "
+            "Nên duy trì theo khuyến nghị nhà sản xuất để tối ưu độ bám và tiết kiệm năng lượng."
+        )
+        recommendations = ["Kiểm tra lốp khi nguội", "Đảo lốp mỗi 8.000–10.000 km"]
+    else:
+        response = (
+            f"{model}: Đã tiếp nhận yêu cầu chẩn đoán ({act}). "
+            "Vui lòng theo dõi cảnh báo trên màn hình trung tâm để xử lý kịp thời."
+        )
+        recommendations = ["Đọc mã lỗi OBD nếu có", "Liên hệ xưởng dịch vụ khi lỗi lặp lại"]
+
     return {
         "status": "ok",
-        "action": action,
-        "object": object,
+        "response": response,
+        "action": act,
+        "object": target,
         "number": number,
         "key_word": key_word,
+        "queries": queries,
+        # "rewrite_message": rewrite_message,
+        "recommendations": recommendations,
     }
+
 
 def Frs_tool(
     state: VehicleState,
@@ -241,14 +321,30 @@ def Frs_tool(
     queries: str | None = None,
     new_frs: bool | None = None,
 ) -> dict[str, Any]:
-    """Stub – Purpose - Provide software-version, firmware version, fota version information: release history, newly added functions, """
+    """Simulated FRS/firmware release response."""
+    model = car_model_name or "VinFast"
+    latest = {
+        "software_version": "v3.2.1",
+        "firmware_version": "fw-1.14.0",
+        "fota_version": "fota-2026.04",
+    }
+    response = (
+        f"{model}: phiên bản hiện hành {latest['software_version']} / {latest['firmware_version']}. "
+        "Bản cập nhật tối ưu điều hòa và cải thiện độ mượt giao diện."
+    )
+    if new_frs:
+        response += " Có bản phát hành mới, khuyến nghị cập nhật khi xe đang đỗ."
+
     return {
         "status": "ok",
-        "rewrite_message": rewrite_message,
-        "car_model_name": car_model_name,
+        "response": response,
+        "car_model_name": model,
         "queries": queries,
-        "new_frs": new_frs,
+        "new_frs": bool(new_frs),
+        "release_info": latest,
+        # "rewrite_message": rewrite_message,
     }
+
 
 def tourism_search(
     state: VehicleState,
@@ -257,25 +353,54 @@ def tourism_search(
     location: str | None = None,
     queries: str | None = None,
 ) -> dict[str, Any]:
-    """Stub – useful for when you need to answer questions about travel: unique or popular restaurants & dishes, local specialties, si"""
+    """Simulated tourism recommendation response."""
+    area = location or "điểm đến bạn quan tâm"
+    q = queries or rewrite_message or "du lịch cuối tuần"
+    places = ["Bảo tàng địa phương", "Phố ẩm thực trung tâm", "Khu ngắm cảnh ven sông"]
+    response = f"Gợi ý lịch trình tại {area} cho '{q}': {', '.join(places)}."
     return {
         "status": "ok",
-        "rewrite_message": rewrite_message,
-        "location": location,
-        "queries": queries,
+        "response": response,
+        "location": area,
+        "queries": q,
+        "highlights": places,
     }
+
 
 def zodiac_search(state: VehicleState, *, rewrite_message: str | None = None) -> dict[str, Any]:
-    """Stub – Useful for answering questions related to zodiac signs, including general information (such as birth dates, personality """
+    """Simulated zodiac information response."""
+    text = (rewrite_message or "").lower()
+    sign = "cung của bạn"
+    for s in [
+        "bạch dương", "kim ngưu", "song tử", "cự giải", "sư tử", "xử nữ",
+        "thiên bình", "bọ cạp", "nhân mã", "ma kết", "bảo bình", "song ngư",
+    ]:
+        if s in text:
+            sign = s.title()
+            break
+
+    response = (
+        f"Tổng quan {sign}: hôm nay phù hợp để hoàn thành việc tồn đọng, "
+        "ưu tiên giao tiếp rõ ràng và giữ nhịp sinh hoạt ổn định."
+    )
     return {
         "status": "ok",
-        "rewrite_message": rewrite_message,
+        "response": response,
+        # "rewrite_message": rewrite_message,
+        "zodiac": sign,
+        "lucky_numbers": [3, 7, 21],
     }
 
+
 def vingroup_knowledge_base(state: VehicleState) -> dict[str, Any]:
-    """Stub – Một công cụ chuyên về tập đoàn Vingroup, hữu ích khi đầu vào đề cập đến bất cứ điều gì liên quan đến Vingroup và các côn"""
+    """Simulated Vingroup KB response."""
     return {
         "status": "ok",
+        "response": (
+            "Thông tin nhanh về hệ sinh thái Vingroup: công nghệ, công nghiệp, "
+            "thương mại dịch vụ và các công ty thành viên liên quan."
+        ),
+        "highlights": ["Vingroup", "VinFast", "Vinpearl", "Vinhomes", "Vinmec", "Vinschool"],
     }
 
 # name -> callable. Keys must match data/apis/car_apis.json.
