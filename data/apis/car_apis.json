@@ -1,0 +1,188 @@
+[
+  {
+    "name": "set_climate_temperature",
+    "description": "Set the target climate-control temperature (Celsius) for a seating zone of the car.",
+    "parameters": {
+      "zone": {
+        "type": "string",
+        "description": "Seating zone to adjust. One of: driver, passenger, rear, all.",
+        "default": "all",
+        "required": true
+      },
+      "temperature": {
+        "type": "number",
+        "description": "Target temperature in Celsius, between 16 and 30.",
+        "default": "",
+        "required": true
+      }
+    }
+  },
+  {
+    "name": "set_fan_speed",
+    "description": "Set the climate-control fan speed.",
+    "parameters": {
+      "level": {
+        "type": "integer",
+        "description": "Fan speed level from 0 (off) to 5 (max).",
+        "default": "",
+        "required": true
+      }
+    }
+  },
+  {
+    "name": "control_window",
+    "description": "Open or close one or all of the car windows.",
+    "parameters": {
+      "window": {
+        "type": "string",
+        "description": "Window to control. One of: driver, passenger, rear_left, rear_right, all.",
+        "default": "all",
+        "required": true
+      },
+      "action": {
+        "type": "string",
+        "description": "Action to perform. One of: open, close.",
+        "default": "",
+        "required": true
+      }
+    }
+  },
+  {
+    "name": "set_volume",
+    "description": "Set the audio system volume.",
+    "parameters": {
+      "level": {
+        "type": "integer",
+        "description": "Volume level from 0 (mute) to 40 (max).",
+        "default": "",
+        "required": true
+      }
+    }
+  },
+  {
+    "name": "play_media",
+    "description": "Start playing media from a given source, optionally a specific title.",
+    "parameters": {
+      "source": {
+        "type": "string",
+        "description": "Media source. One of: radio, bluetooth, usb, streaming.",
+        "default": "",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "description": "Optional title/track name to play.",
+        "default": "",
+        "required": false
+      }
+    }
+  },
+  {
+    "name": "lock_doors",
+    "description": "Lock or unlock all car doors.",
+    "parameters": {
+      "lock": {
+        "type": "boolean",
+        "description": "True to lock the doors, false to unlock.",
+        "default": "",
+        "required": true
+      }
+    }
+  },
+  {
+    "name": "adjust_seat",
+    "description": "Adjust the recline angle of a specific seat.",
+    "parameters": {
+      "seat": {
+        "type": "string",
+        "description": "Seat to adjust. One of: driver, passenger, rear_left, rear_right.",
+        "default": "",
+        "required": true
+      },
+      "recline": {
+        "type": "integer",
+        "description": "Recline angle in degrees, between 0 and 60.",
+        "default": "",
+        "required": true
+      }
+    }
+  },
+  {
+    "name": "set_cruise_control",
+    "description": "Enable or disable cruise control and optionally set the target speed.",
+    "parameters": {
+      "enabled": {
+        "type": "boolean",
+        "description": "True to enable cruise control, false to disable.",
+        "default": "",
+        "required": true
+      },
+      "speed": {
+        "type": "integer",
+        "description": "Target speed in km/h (30-180), required when enabling.",
+        "default": 0,
+        "required": false
+      }
+    }
+  },
+  {
+    "name": "set_navigation_destination",
+    "description": "Set the navigation system destination address and routing preference.",
+    "parameters": {
+      "address": {
+        "type": "string",
+        "description": "Destination address or place name.",
+        "default": "",
+        "required": true
+      },
+      "avoid_tolls": {
+        "type": "boolean",
+        "description": "Whether to avoid toll roads on the route.",
+        "default": false,
+        "required": false
+      }
+    }
+  },
+  {
+    "name": "set_drive_mode",
+    "description": "Set the vehicle drive mode.",
+    "parameters": {
+      "mode": {
+        "type": "string",
+        "description": "Drive mode. One of: eco, comfort, sport, off_road.",
+        "default": "",
+        "required": true
+      }
+    }
+  },
+  {
+    "name": "toggle_defroster",
+    "description": "Turn the front or rear window defroster on or off.",
+    "parameters": {
+      "zone": {
+        "type": "string",
+        "description": "Defroster zone. One of: front, rear.",
+        "default": "",
+        "required": true
+      },
+      "enabled": {
+        "type": "boolean",
+        "description": "True to turn the defroster on, false to turn it off.",
+        "default": "",
+        "required": true
+      }
+    }
+  },
+  {
+    "name": "find_charging_station",
+    "description": "Find nearby EV charging stations within a given radius.",
+    "parameters": {
+      "radius_km": {
+        "type": "number",
+        "description": "Search radius in kilometers, between 0 and 100.",
+        "default": 10.0,
+        "required": false
+      }
+    }
+  }
+]
