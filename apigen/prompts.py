@@ -137,6 +137,10 @@ Imitate their vocabulary, tone, cultural references, and daily-life situations.
 The queries must feel natural and authentic to who this person is —
 not generic textbook examples.
 
+Remember that the user are talking with a voice assistant, 
+so they could call the car by its name (e.g, "em", "VinFast", "bạn", "cháu", etc.) —
+but not any specific human names, since the car is not a human.
+
 {_format_persona(persona)}
 """
 
