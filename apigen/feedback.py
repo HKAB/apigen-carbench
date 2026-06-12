@@ -14,7 +14,17 @@ class FeedbackLoop:
     def __init__(self, seed_sampler: SeedQASampler):
         self._seed_sampler = seed_sampler
 
-    def accept(self, item: GeneratorOutput, style: QueryStyle) -> QAPair:
-        pair = QAPair(query=item.query, answers=item.answers, style=style)
+    def accept(
+        self,
+        item: GeneratorOutput,
+        style: QueryStyle,
+        execution_results: list | None = None,
+    ) -> QAPair:
+        pair = QAPair(
+            query=item.query,
+            answers=item.answers,
+            style=style,
+            execution_results=execution_results or [],
+        )
         self._seed_sampler.add(pair)
         return pair

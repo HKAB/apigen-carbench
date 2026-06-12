@@ -31,7 +31,7 @@ STYLE_INSTRUCTIONS: dict[QueryStyle, str] = {
 
 SYSTEM_PROMPT = (
     "You are a data generator for a user-car voice-assistant function-calling dataset. "
-    "Given a set of car-control APIs, you produce realistic natural-language driver queries paired "
+    "Given a set of car-control APIs, you produce realistic natural-language Vietnamese driver queries paired "
     "with the exact function calls that fulfill them. You only use the provided APIs and their "
     "declared parameters. You never invent functions or arguments."
 )
@@ -138,8 +138,8 @@ The queries must feel natural and authentic to who this person is —
 not generic textbook examples.
 
 Remember that the user are talking with a voice assistant, 
-so they could call the car by its name (e.g, "em", "VinFast", "bạn", "cháu", etc.) —
-but not any specific human names, since the car is not a human.
+so they might call the car by its name (e.g, "em", "VinFast", "bạn", "cháu", etc.) —
+but not any specific human names, since the car is not a human. Sometimes they just gave direct order.
 
 {_format_persona(persona)}
 """

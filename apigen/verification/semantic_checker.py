@@ -67,7 +67,8 @@ class SemanticChecker:
 {json.dumps(execution_results, indent=2, default=str)}
 
 ## Question
-Do the chosen function calls and their execution results fully and correctly satisfy the user query?
+Do the chosen function calls and their execution results correctly satisfy the user query?
+Do the user call the assistant by real name other than "VinFast" or common pronouns (like "em", "bạn", "cháu")? If yes, then the query might be mistake the persona of the user as the assistant, which is a semantic error.
 
 ## Output format
 {OUTPUT_CONTRACT}"""
@@ -83,7 +84,10 @@ Do the chosen function calls and their execution results fully and correctly sat
         execution_results: list,
     ) -> VerifyResult:
         messages = self._build_messages(item, apis, execution_results)
-        text = await self._client.chat(self._model, messages, temperature=0.0)
+        try:
+            text = await self._client.chat(self._model, messages, temperature=0.0)
+        except Exception as exc:  # noqa: BLE001 - keep pipeline alive on transient LLM errors
+            return VerifyResult.fail("semantic", f"semantic checker LLM error: {exc}")
         passed, reason = _parse_verdict(text)
         if passed:
             return VerifyResult.ok(execution_results=execution_results)

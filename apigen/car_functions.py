@@ -11,8 +11,12 @@ rest of the pipeline does not depend on these specific functions.
 
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Any
+from urllib import error, request
 
 VALID_ZONES = {"driver", "passenger", "rear", "all"}
 VALID_WINDOWS = {"driver", "passenger", "rear_left", "rear_right", "all"}
@@ -20,6 +24,71 @@ VALID_WINDOW_ACTIONS = {"open", "close"}
 VALID_MEDIA_SOURCES = {"radio", "bluetooth", "usb", "streaming"}
 VALID_SEATS = {"driver", "passenger", "rear_left", "rear_right"}
 VALID_DRIVE_MODES = {"eco", "comfort", "sport", "off_road"}
+
+
+@lru_cache(maxsize=1)
+def _llm_runtime() -> tuple[str, str, str]:
+    base_url = os.getenv("LLM_BASE_URL", "http://localhost:8000/v1").rstrip("/")
+    if not base_url.endswith("/v1"):
+        base_url += "/v1"
+    api_token = os.getenv("LLM_API_TOKEN", "EMPTY")
+    model = os.getenv("GENERATOR_MODEL_NAME", "meta-llama/Meta-Llama-3.1-8B-Instruct")
+    return base_url, api_token, model
+
+
+def _llm_tool_answer(*, tool_name: str, user_need: str, context: dict[str, Any]) -> str:
+    """Generate a short, informative assistant answer for info/RAG-like tools.
+
+    Uses the same serving config/model as the generator stage via env vars.
+    Falls back to a compact deterministic response if LLM is unavailable.
+    """
+    base_url, api_token, model = _llm_runtime()
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Bạn là trợ lý trên xe. Trả lời ngắn gọn, đúng trọng tâm, hữu ích, và giải quyết đầy đủ "
+                "nhu cầu người dùng. Không dài dòng. Ưu tiên tiếng Việt tự nhiên."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Công cụ: {tool_name}\n"
+                f"Nhu cầu người dùng: {user_need or 'Yêu cầu thông tin tổng quát'}\n"
+                f"Ngữ cảnh: {json.dumps(context, ensure_ascii=False)}\n"
+                "Hãy trả lời ngắn gọn (1-3 câu), rõ ràng, có thông tin hành động khi phù hợp."
+            ),
+        },
+    ]
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.2,
+        "max_tokens": 180,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_token}",
+    }
+    req = request.Request(
+        f"{base_url}/chat/completions",
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    try:
+        with request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        content = data["choices"][0]["message"]["content"].strip()
+        if content:
+            return content
+    except (error.URLError, error.HTTPError, TimeoutError, KeyError, IndexError, json.JSONDecodeError):
+        pass
+
+    # Safe fallback to keep execution deterministic even when LLM endpoint fails.
+    brief_need = (user_need or "Yêu cầu thông tin tổng quát").strip()
+    return f"Đã ghi nhận yêu cầu: {brief_need}. Hiện chưa lấy được phản hồi chi tiết, vui lòng thử lại sau ít phút."
 
 
 @dataclass
@@ -160,20 +229,14 @@ def vinfast_knowledge_base(
     """Simulated downstream KB response for VinFast-related queries."""
     topic = (queries or key_word or rewrite_message or "thông tin tổng quan").strip()
     model = (car_model_name or "VinFast").strip()
-    response = (
-        f"Đã tra cứu kiến thức VinFast cho '{topic}' ({model}). "
-        "Gợi ý: kiểm tra hướng dẫn sử dụng, lịch bảo dưỡng định kỳ và bản cập nhật phần mềm mới nhất."
+    response = _llm_tool_answer(
+        tool_name="vinfast_knowledge_base",
+        user_need=topic,
+        context={"car_model_name": model, "topic": topic},
     )
     return {
         "status": "ok",
-        "response": response,
-        "topic": topic,
-        "car_model_name": model,
-        "insights": [
-            "Bảo dưỡng định kỳ giúp tối ưu hiệu suất pin/động cơ.",
-            "Nên cập nhật phần mềm khi xe ở trạng thái đỗ an toàn.",
-            "Theo dõi cảnh báo trên cụm đồng hồ để xử lý sớm.",
-        ],
+        "response": response
     }
 
 
@@ -184,19 +247,18 @@ def weather_tool(state: VehicleState, *, rewrite_message: str | None = None) -> 
     temp_c = 24 + (signal % 8)
     rain_prob = (signal * 9) % 100
     condition = "nhiều mây" if rain_prob >= 40 else "trời quang"
-    response = (
-        f"Nhiệt độ hiện tại khoảng {temp_c}°C, {condition}, "
-        f"khả năng có mưa là {rain_prob}%."
-    )
-    return {
-        "status": "ok",
-        "response": response,
-        "forecast": {
+    response = _llm_tool_answer(
+        tool_name="weather_tool",
+        user_need=msg or "thời tiết hiện tại",
+        context={
             "temperature_c": temp_c,
             "condition": condition,
             "rain_probability_percent": rain_prob,
         },
-        # "rewrite_message": rewrite_message,
+    )
+    return {
+        "status": "ok",
+        "response": response
     }
 
 
@@ -218,28 +280,48 @@ def movie_tool(
     genre = movie_genres or "Khác"
 
     if movie_book_tickets:
-        response = f"Đã giữ chỗ tạm thời cho '{name}' tại {cin}, suất {show_time}. Vui lòng xác nhận thanh toán."
+        response = _llm_tool_answer(
+            tool_name="movie_tool",
+            user_need=rewrite_message or f"Đặt vé phim {name}",
+            context={
+                "movie_name": name,
+                "cinema": cin,
+                "movie_time": show_time,
+                "movie_genres": genre,
+                "intent": "booking",
+            },
+        )
         status = "booking_pending"
     elif movie_information:
-        response = (
-            f"'{name}' ({genre}) hiện có lịch chiếu tại {cin} vào {show_time}. "
-            "Đánh giá khán giả: 8.2/10, thời lượng dự kiến: 118 phút."
+        response = _llm_tool_answer(
+            tool_name="movie_tool",
+            user_need=rewrite_message or f"Thông tin phim {name}",
+            context={
+                "movie_name": name,
+                "cinema": cin,
+                "movie_time": show_time,
+                "movie_genres": genre,
+                "intent": "information",
+            },
         )
         status = "ok"
     else:
-        response = f"Tìm thấy lịch chiếu phù hợp cho '{name}' tại {cin} vào {show_time}."
+        response = _llm_tool_answer(
+            tool_name="movie_tool",
+            user_need=rewrite_message or f"Lịch chiếu phim {name}",
+            context={
+                "movie_name": name,
+                "cinema": cin,
+                "movie_time": show_time,
+                "movie_genres": genre,
+                "intent": "showtimes",
+            },
+        )
         status = "ok"
 
     return {
         "status": status,
         "response": response,
-        "movie_name": name,
-        "cinema": cin,
-        "movie_time": show_time,
-        "movie_genres": genre,
-        "movie_book_tickets": bool(movie_book_tickets),
-        "movie_information": bool(movie_information),
-        # "rewrite_message": rewrite_message,
     }
 
 
@@ -254,13 +336,14 @@ def cooking_search(
     area = location or "khu vực của bạn"
     q = queries or rewrite_message or "món dễ nấu"
     dishes = ["Cơm chiên hải sản", "Canh nấm đậu hũ", "Gà áp chảo sốt tiêu đen"]
-    response = f"Dựa trên yêu cầu '{q}', gợi ý 3 món phù hợp tại {area}: {', '.join(dishes)}."
+    response = _llm_tool_answer(
+        tool_name="cooking_search",
+        user_need=q,
+        context={"location": area, "suggested_dishes": dishes},
+    )
     return {
         "status": "ok",
-        "response": response,
-        "location": area,
-        "queries": q,
-        "suggested_dishes": dishes,
+        "response": response
     }
 
 
@@ -281,35 +364,33 @@ def Vehicle_faults_and_operating_tips(
     act = action or "check_issues"
 
     if target == "BATTERY":
-        response = (
-            f"{model}: Hệ thống pin đang ở mức an toàn. "
-            "Khuyến nghị giữ pin trong khoảng 20%–80% cho sử dụng hằng ngày."
+        response = _llm_tool_answer(
+            tool_name="Vehicle_faults_and_operating_tips",
+            user_need=queries or rewrite_message or key_word or "kiểm tra pin",
+            context={"car_model_name": model, "action": act, "object": target, "number": number},
         )
-        recommendations = ["Hạn chế sạc nhanh liên tục", "Kiểm tra cổng sạc định kỳ"]
     elif target == "TIRE_PRESSURE":
         psi = number if number is not None else 32
-        response = (
-            f"{model}: Áp suất lốp hiện tại khoảng {psi} PSI. "
-            "Nên duy trì theo khuyến nghị nhà sản xuất để tối ưu độ bám và tiết kiệm năng lượng."
+        response = _llm_tool_answer(
+            tool_name="Vehicle_faults_and_operating_tips",
+            user_need=queries or rewrite_message or key_word or "kiểm tra áp suất lốp",
+            context={
+                "car_model_name": model,
+                "action": act,
+                "object": target,
+                "tire_pressure_psi": psi,
+            },
         )
-        recommendations = ["Kiểm tra lốp khi nguội", "Đảo lốp mỗi 8.000–10.000 km"]
     else:
-        response = (
-            f"{model}: Đã tiếp nhận yêu cầu chẩn đoán ({act}). "
-            "Vui lòng theo dõi cảnh báo trên màn hình trung tâm để xử lý kịp thời."
+        response = _llm_tool_answer(
+            tool_name="Vehicle_faults_and_operating_tips",
+            user_need=queries or rewrite_message or key_word or "chẩn đoán lỗi xe",
+            context={"car_model_name": model, "action": act, "object": target, "number": number},
         )
-        recommendations = ["Đọc mã lỗi OBD nếu có", "Liên hệ xưởng dịch vụ khi lỗi lặp lại"]
 
     return {
         "status": "ok",
-        "response": response,
-        "action": act,
-        "object": target,
-        "number": number,
-        "key_word": key_word,
-        "queries": queries,
-        # "rewrite_message": rewrite_message,
-        "recommendations": recommendations,
+        "response": response
     }
 
 
@@ -328,21 +409,17 @@ def Frs_tool(
         "firmware_version": "fw-1.14.0",
         "fota_version": "fota-2026.04",
     }
-    response = (
-        f"{model}: phiên bản hiện hành {latest['software_version']} / {latest['firmware_version']}. "
-        "Bản cập nhật tối ưu điều hòa và cải thiện độ mượt giao diện."
+    response = _llm_tool_answer(
+        tool_name="Frs_tool",
+        user_need=queries or rewrite_message or "cập nhật phần mềm xe",
+        context={"car_model_name": model, "new_frs": bool(new_frs), "release_info": latest},
     )
     if new_frs:
-        response += " Có bản phát hành mới, khuyến nghị cập nhật khi xe đang đỗ."
+        response += " Khuyến nghị cập nhật khi xe đang đỗ an toàn."
 
     return {
         "status": "ok",
-        "response": response,
-        "car_model_name": model,
-        "queries": queries,
-        "new_frs": bool(new_frs),
-        "release_info": latest,
-        # "rewrite_message": rewrite_message,
+        "response": response
     }
 
 
@@ -357,13 +434,14 @@ def tourism_search(
     area = location or "điểm đến bạn quan tâm"
     q = queries or rewrite_message or "du lịch cuối tuần"
     places = ["Bảo tàng địa phương", "Phố ẩm thực trung tâm", "Khu ngắm cảnh ven sông"]
-    response = f"Gợi ý lịch trình tại {area} cho '{q}': {', '.join(places)}."
+    response = _llm_tool_answer(
+        tool_name="tourism_search",
+        user_need=q,
+        context={"location": area, "highlights": places},
+    )
     return {
         "status": "ok",
-        "response": response,
-        "location": area,
-        "queries": q,
-        "highlights": places,
+        "response": response
     }
 
 
@@ -379,28 +457,27 @@ def zodiac_search(state: VehicleState, *, rewrite_message: str | None = None) ->
             sign = s.title()
             break
 
-    response = (
-        f"Tổng quan {sign}: hôm nay phù hợp để hoàn thành việc tồn đọng, "
-        "ưu tiên giao tiếp rõ ràng và giữ nhịp sinh hoạt ổn định."
+    response = _llm_tool_answer(
+        tool_name="zodiac_search",
+        user_need=rewrite_message or sign,
+        context={"zodiac": sign, "lucky_numbers": [3, 7, 21]},
     )
     return {
         "status": "ok",
-        "response": response,
-        # "rewrite_message": rewrite_message,
-        "zodiac": sign,
-        "lucky_numbers": [3, 7, 21],
+        "response": response
     }
 
 
 def vingroup_knowledge_base(state: VehicleState) -> dict[str, Any]:
     """Simulated Vingroup KB response."""
+    response = _llm_tool_answer(
+        tool_name="vingroup_knowledge_base",
+        user_need="thông tin hệ sinh thái Vingroup",
+        context={"highlights": ["Vingroup", "VinFast", "Vinpearl", "Vinhomes", "Vinmec", "Vinschool"]},
+    )
     return {
         "status": "ok",
-        "response": (
-            "Thông tin nhanh về hệ sinh thái Vingroup: công nghệ, công nghiệp, "
-            "thương mại dịch vụ và các công ty thành viên liên quan."
-        ),
-        "highlights": ["Vingroup", "VinFast", "Vinpearl", "Vinhomes", "Vinmec", "Vinschool"],
+        "response": response
     }
 
 # name -> callable. Keys must match data/apis/car_apis.json.

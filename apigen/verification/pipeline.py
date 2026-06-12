@@ -16,7 +16,7 @@ class VerificationPipeline:
         execution_checker: ExecutionChecker,
         semantic_checker: SemanticChecker,
         library: ApiLibrary,
-    ):
+    ): 
         self._format = format_checker
         self._execution = execution_checker
         self._semantic = semantic_checker

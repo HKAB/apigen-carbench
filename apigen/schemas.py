@@ -68,6 +68,7 @@ class QAPair(BaseModel):
     query: str
     answers: list[FunctionCall] = Field(default_factory=list)
     style: QueryStyle | None = None
+    execution_results: list[Any] = Field(default_factory=list)
 
     def to_generator_output(self) -> GeneratorOutput:
         return GeneratorOutput(query=self.query, answers=self.answers)

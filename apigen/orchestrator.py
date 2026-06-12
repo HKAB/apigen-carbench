@@ -9,7 +9,9 @@ counts are tracked, mirroring the paper's statistics table.
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .feedback import FeedbackLoop
 from .generator import QueryAnswerGenerator
@@ -61,6 +63,8 @@ class Orchestrator:
         feedback: FeedbackLoop,
         concurrency: int = 8,
         pairs_per_batch: int = 3,
+        semantic_fail_log_path: str | None = None,
+        verified_log_path: str | None = None,
     ):
         self._generator = generator
         self._pipeline = pipeline
@@ -74,6 +78,35 @@ class Orchestrator:
         self._persona_sampler = persona_sampler  # None → no persona injection
         self.stats = Stats()
         self._lock = asyncio.Lock()
+        self._semantic_fail_log_path = Path(semantic_fail_log_path) if semantic_fail_log_path else None
+        self._semantic_log_lock = asyncio.Lock()
+        self._verified_log_path = Path(verified_log_path) if verified_log_path else None
+        self._verified_log_lock = asyncio.Lock()
+
+    async def _log_semantic_failure(self, item: GeneratorOutput, result) -> None:
+        if not self._semantic_fail_log_path:
+            return
+        payload = {
+            "query": item.query,
+            "answers": [a.model_dump() for a in item.answers],
+            "reason": result.reason,
+            "failed_stage": result.failed_stage,
+            "execution_results": result.execution_results,
+        }
+        line = json.dumps(payload, ensure_ascii=False, default=str) + "\n"
+        async with self._semantic_log_lock:
+            self._semantic_fail_log_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._semantic_fail_log_path.open("a", encoding="utf-8") as f:
+                f.write(line)
+
+    async def _log_verified_pair(self, pair: QAPair) -> None:
+        if not self._verified_log_path:
+            return
+        line = json.dumps(pair.model_dump(exclude_none=True), ensure_ascii=False, default=str) + "\n"
+        async with self._verified_log_lock:
+            self._verified_log_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._verified_log_path.open("a", encoding="utf-8") as f:
+                f.write(line)
 
     async def _run_one_batch(self) -> list[QAPair]:
         """Generate one batch and verify each pair; return the verified pairs."""
@@ -92,11 +125,15 @@ class Orchestrator:
         accepted: list[QAPair] = []
         for item in items:
             result = await self._pipeline.verify(item)
+            if (not result.passed) and result.failed_stage == "semantic":
+                await self._log_semantic_failure(item, result)
             async with self._lock:
                 self.stats.generated += 1
                 self.stats.record(result.passed, result.failed_stage)
                 if result.passed:
-                    accepted.append(self._feedback.accept(item, style))
+                    pair = self._feedback.accept(item, style, result.execution_results)
+                    accepted.append(pair)
+                    await self._log_verified_pair(pair)
         return accepted
 
     async def run(self, target: int, max_waves: int | None = None) -> list[QAPair]:
