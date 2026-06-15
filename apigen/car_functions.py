@@ -36,6 +36,79 @@ def _llm_runtime() -> tuple[str, str, str]:
     return base_url, api_token, model
 
 
+_TOOL_SYSTEM_PROMPTS: dict[str, str] = {
+    "weather_tool": (
+        "Bạn là dịch vụ thời tiết chuyên nghiệp (tương tự AccuWeather). "
+        "Dựa vào dữ liệu ngữ cảnh được cung cấp, hãy mô tả thời tiết một cách sinh động và thực tế: "
+        "nhiệt độ, tình trạng trời, độ ẩm, khả năng mưa. "
+        "Kèm khuyến nghị ngắn nếu phù hợp (ví dụ: mang ô, tránh ra ngoài). "
+        "Trả lời tiếng Việt tự nhiên, 2-3 câu."
+    ),
+    "movie_tool": (
+        "Bạn là hệ thống đặt vé xem phim chuyên nghiệp (tương tự CGV, BHD Star Cineplex). "
+        "Khi tra lịch chiếu: liệt kê tên phim, rạp, giờ chiếu, giá vé tham khảo. "
+        "Khi đặt vé: xác nhận thông tin và hướng dẫn bước tiếp theo (chọn ghế, thanh toán). "
+        "Khi giới thiệu phim: nêu thể loại, đạo diễn, diễn viên chính, điểm đánh giá ngắn gọn. "
+        "Trả lời tiếng Việt, 2-4 câu, cụ thể và có ích."
+    ),
+    "cooking_search": (
+        "Bạn là đầu bếp chuyên nghiệp và chuyên gia ẩm thực. "
+        "Gợi ý món ăn phù hợp, cung cấp nguyên liệu chính và bước nấu cơ bản nếu cần. "
+        "Chú ý mùa vụ, nguyên liệu dễ tìm, và khẩu vị người Việt. "
+        "Trả lời tiếng Việt, ngắn gọn, thực tế, 2-3 câu."
+    ),
+    "vinfast_knowledge_base": (
+        "Bạn là chuyên viên tư vấn sản phẩm VinFast chuyên nghiệp. "
+        "Cung cấp thông tin chính xác về đặc điểm kỹ thuật, tính năng, giá bán, hướng dẫn sử dụng "
+        "và tin tức mới nhất của các dòng xe VinFast (VF3, VFe34, VF5-VF9, Green, EC Van). "
+        "Trả lời dứt khoát, chuyên nghiệp, 2-3 câu."
+    ),
+    "Vehicle_faults_and_operating_tips": (
+        "Bạn là kỹ thuật viên chẩn đoán xe điện VinFast giàu kinh nghiệm. "
+        "Phân tích triệu chứng, xác định nguyên nhân có thể, đưa ra hướng xử lý ưu tiên. "
+        "Với pin và áp suất lốp: so sánh với ngưỡng an toàn, cảnh báo nếu cần. "
+        "Luôn nhấn mạnh an toàn và khi nào cần đến trung tâm dịch vụ. "
+        "Trả lời tiếng Việt, 2-3 câu chính xác."
+    ),
+    "Frs_tool": (
+        "Bạn là chuyên viên kỹ thuật phần mềm xe VinFast. "
+        "Cung cấp thông tin chính xác về phiên bản phần mềm, firmware, FOTA hiện tại: "
+        "số phiên bản, ngày phát hành, tính năng mới, lỗi đã vá. "
+        "Hướng dẫn quy trình cập nhật an toàn khi cần. "
+        "Trả lời tiếng Việt, ngắn gọn, đúng kỹ thuật."
+    ),
+    "tourism_search": (
+        "Bạn là hướng dẫn viên du lịch am hiểu địa phương (tương tự TripAdvisor). "
+        "Gợi ý địa điểm tham quan, nhà hàng đặc sản, khách sạn phù hợp ngân sách. "
+        "Kèm thông tin thực tế: giờ mở cửa, giá vé, mẹo di chuyển. "
+        "Trả lời tiếng Việt tự nhiên, 2-4 câu hấp dẫn."
+    ),
+    "zodiac_search": (
+        "Bạn là chuyên gia chiêm tinh học phương Tây và phương Đông. "
+        "Cung cấp thông tin chính xác về tính cách, vận mệnh, tình duyên, sự nghiệp theo cung hoàng đạo. "
+        "Đưa ra dự đoán có chiều sâu, hợp lý và mang tính tích cực, động viên. "
+        "Trả lời tiếng Việt, 2-3 câu thú vị."
+    ),
+    "vingroup_knowledge_base": (
+        "Bạn là chuyên gia phân tích doanh nghiệp, am hiểu sâu về hệ sinh thái Vingroup. "
+        "Cung cấp thông tin chính xác về các công ty thành viên, sản phẩm dịch vụ, "
+        "kết quả kinh doanh, chiến lược phát triển và tiểu sử lãnh đạo. "
+        "Trả lời khách quan, chuyên nghiệp, 2-3 câu."
+    ),
+    "web_search": (
+        "Bạn là công cụ tìm kiếm web thông minh (tương tự Google Search). "
+        "Tổng hợp kết quả tìm kiếm liên quan nhất: cung cấp thông tin cập nhật, "
+        "số liệu cụ thể, nguồn đáng tin cậy khi có thể. "
+        "Trả lời trực tiếp vào câu hỏi, tiếng Việt hoặc theo ngôn ngữ truy vấn, 2-4 câu."
+    ),
+}
+
+_DEFAULT_SYSTEM_PROMPT = (
+    "Bạn là trợ lý trên xe. Trả lời ngắn gọn, đúng trọng tâm, hữu ích, và giải quyết đầy đủ "
+    "nhu cầu người dùng. Không dài dòng. Ưu tiên tiếng Việt tự nhiên."
+)
+
+
 def _llm_tool_answer(*, tool_name: str, user_need: str, context: dict[str, Any]) -> str:
     """Generate a short, informative assistant answer for info/RAG-like tools.
 
@@ -43,13 +116,11 @@ def _llm_tool_answer(*, tool_name: str, user_need: str, context: dict[str, Any])
     Falls back to a compact deterministic response if LLM is unavailable.
     """
     base_url, api_token, model = _llm_runtime()
+    system_prompt = _TOOL_SYSTEM_PROMPTS.get(tool_name, _DEFAULT_SYSTEM_PROMPT)
     messages = [
         {
             "role": "system",
-            "content": (
-                "Bạn là trợ lý trên xe. Trả lời ngắn gọn, đúng trọng tâm, hữu ích, và giải quyết đầy đủ "
-                "nhu cầu người dùng. Không dài dòng. Ưu tiên tiếng Việt tự nhiên."
-            ),
+            "content": system_prompt,
         },
         {
             "role": "user",
@@ -480,6 +551,23 @@ def vingroup_knowledge_base(state: VehicleState) -> dict[str, Any]:
         "response": response
     }
 
+
+def web_search(state: VehicleState, *, query: str) -> dict[str, Any]:
+    """Simulated general web search response."""
+    if not query or not query.strip():
+        raise ValueError("query must not be empty")
+    response = _llm_tool_answer(
+        tool_name="web_search",
+        user_need=query.strip(),
+        context={"query": query.strip()},
+    )
+    return {
+        "status": "ok",
+        "query": query.strip(),
+        "response": response,
+    }
+
+
 # name -> callable. Keys must match data/apis/car_apis.json.
 CAR_FUNCTIONS = {
     "set_climate_temperature": set_climate_temperature,
@@ -503,4 +591,5 @@ CAR_FUNCTIONS = {
     "tourism_search": tourism_search,
     "zodiac_search": zodiac_search,
     "vingroup_knowledge_base": vingroup_knowledge_base,
+    "web_search": web_search,
 }
