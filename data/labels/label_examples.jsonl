@@ -1,0 +1,14 @@
+{"id": "ex001", "messages": [{"role": "user", "content": "Kim Ngưu không hợp với cung nào"}], "label": "zodiac_search"}
+{"id": "ex002", "messages": [{"role": "user", "content": "Con số may mắn của Song Ngư hôm nay là gì"}], "label": "zodiac_search"}
+{"id": "ex003", "messages": [{"role": "user", "content": "Trời ngày mai có mưa không em"}], "label": "weather_tool"}
+{"id": "ex004", "messages": [{"role": "user", "content": "Hôm nay đi biển Vũng Tàu có nắng không"}], "label": "weather_tool"}
+{"id": "ex005", "messages": [{"role": "user", "content": "Phim Mai chiếu mấy giờ ở CGV Vincom"}], "label": "movie_tool"}
+{"id": "ex006", "messages": [{"role": "user", "content": "Có phim nào hay đang chiếu cuối tuần này không"}], "label": "movie_tool"}
+{"id": "ex007", "messages": [{"role": "user", "content": "Cách nấu phở bò ngon tại nhà"}], "label": "cooking_search"}
+{"id": "ex008", "messages": [{"role": "user", "content": "Làm sao để kho thịt cho mềm"}], "label": "cooking_search"}
+{"id": "ex009", "messages": [{"role": "user", "content": "Đà Lạt có đặc sản gì nổi tiếng"}], "label": "tourism_search"}
+{"id": "ex010", "messages": [{"role": "user", "content": "Gợi ý khách sạn gần biển ở Đà Nẵng"}], "label": "tourism_search"}
+{"id": "ex011", "messages": [{"role": "user", "content": "Chủ tịch hội đồng quản trị Vingroup là ai"}], "label": "vingroup_knowledge_base"}
+{"id": "ex012", "messages": [{"role": "user", "content": "Xanh SM thuộc tập đoàn nào"}], "label": "vingroup_knowledge_base"}
+{"id": "ex013", "messages": [{"role": "user", "content": "VF8 có những tính năng an toàn gì"}], "label": "vinfast_knowledge_base"}
+{"id": "ex014", "messages": [{"role": "user", "content": "Nên mua VF5 hay VF6 cho gia đình"}], "label": "vinfast_knowledge_base"}

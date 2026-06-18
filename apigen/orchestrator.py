@@ -15,7 +15,13 @@ from pathlib import Path
 
 from .feedback import FeedbackLoop
 from .generator import QueryAnswerGenerator
-from .samplers import ApiSampler, PersonaSampler, PromptSampler, SeedQASampler
+from .samplers import (
+    ApiSampler,
+    LabelExampleSampler,
+    PersonaSampler,
+    PromptSampler,
+    SeedQASampler,
+)
 from .schemas import GeneratorOutput, QAPair
 from .verification.pipeline import VerificationPipeline
 
@@ -65,6 +71,7 @@ class Orchestrator:
         pairs_per_batch: int = 3,
         semantic_fail_log_path: str | None = None,
         verified_log_path: str | None = None,
+        label_sampler: LabelExampleSampler | None = None,
     ):
         self._generator = generator
         self._pipeline = pipeline
@@ -76,6 +83,7 @@ class Orchestrator:
         self._sem = asyncio.Semaphore(self._concurrency)
         self._pairs_per_batch = pairs_per_batch
         self._persona_sampler = persona_sampler  # None → no persona injection
+        self._label_sampler = label_sampler  # None → no real-label few-shot
         self.stats = Stats()
         self._lock = asyncio.Lock()
         self._semantic_fail_log_path = Path(semantic_fail_log_path) if semantic_fail_log_path else None
@@ -112,14 +120,33 @@ class Orchestrator:
         """Generate one batch and verify each pair; return the verified pairs."""
         async with self._sem:
             style = self._prompt_sampler.sample()
-            apis = self._api_sampler.sample()
+
+            # Real-label few-shot (opt-in): ensure the sampled APIs include a tool
+            # that has real examples, then ground the prompt in those examples.
+            forced_tool = self._label_sampler.sample_tool() if self._label_sampler else None
+            apis = self._api_sampler.sample(
+                include=[forced_tool] if forced_tool else None
+            )
             if not apis:
                 return []
-            seeds = self._seed_sampler.sample(style)
+
+            real_examples: list = []
+            seeds: list = []
+            if self._label_sampler is not None:
+                real_examples = self._label_sampler.sample_for([a.name for a in apis])
+            # Fall back to synthetic seed examples when no real ones matched.
+            if not real_examples:
+                seeds = self._seed_sampler.sample(style)
+
             # Sample a fresh persona per batch for maximum query diversity.
             persona = self._persona_sampler.sample() if self._persona_sampler else None
             items = await self._generator.generate(
-                apis, seeds, style, self._pairs_per_batch, persona=persona
+                apis,
+                seeds,
+                style,
+                self._pairs_per_batch,
+                persona=persona,
+                real_examples=real_examples,
             )
 
         accepted: list[QAPair] = []

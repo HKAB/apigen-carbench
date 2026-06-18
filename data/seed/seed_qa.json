@@ -1,27 +1,27 @@
 [
   {
-    "query": "Set the driver-side temperature to 22 degrees.",
+    "query": "Bật điều hòa bên tài xế lên 22 độ đi.",
     "answers": [
       {"name": "set_climate_temperature", "arguments": {"zone": "driver", "temperature": 22}}
     ],
     "style": "simple"
   },
   {
-    "query": "Lock all the doors please.",
+    "query": "Khóa hộ tôi tất cả các cửa xe với.",
     "answers": [
       {"name": "lock_doors", "arguments": {"lock": true}}
     ],
     "style": "simple"
   },
   {
-    "query": "Navigate to 1600 Amphitheatre Parkway and avoid toll roads.",
+    "query": "Dẫn đường đến 35 Nguyễn Tuân và tránh các trạm thu phí nhé.",
     "answers": [
-      {"name": "set_navigation_destination", "arguments": {"address": "1600 Amphitheatre Parkway", "avoid_tolls": true}}
+      {"name": "set_navigation_destination", "arguments": {"address": "35 Nguyễn Tuân", "avoid_tolls": true}}
     ],
     "style": "simple"
   },
   {
-    "query": "Turn up the volume to 25 and start playing music from bluetooth.",
+    "query": "Bật âm lượng lên mức 25 rồi phát nhạc từ bluetooth đi.",
     "answers": [
       {"name": "set_volume", "arguments": {"level": 25}},
       {"name": "play_media", "arguments": {"source": "bluetooth"}}
@@ -29,7 +29,7 @@
     "style": "parallel"
   },
   {
-    "query": "Open all the windows and switch the car to sport mode.",
+    "query": "Hạ hết tất cả cửa kính xuống và chuyển xe sang chế độ thể thao.",
     "answers": [
       {"name": "control_window", "arguments": {"window": "all", "action": "open"}},
       {"name": "set_drive_mode", "arguments": {"mode": "sport"}}
@@ -37,7 +37,7 @@
     "style": "parallel_multiple"
   },
   {
-    "query": "It's freezing, turn the front defroster on and set the cabin to 24 degrees everywhere.",
+    "query": "Lạnh quá, bật sấy kính trước lên rồi để điều hòa toàn xe 24 độ đi.",
     "answers": [
       {"name": "toggle_defroster", "arguments": {"zone": "front", "enabled": true}},
       {"name": "set_climate_temperature", "arguments": {"zone": "all", "temperature": 24}}

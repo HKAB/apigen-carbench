@@ -15,7 +15,13 @@ from .feedback import FeedbackLoop
 from .generator import QueryAnswerGenerator
 from .llm_client import AiohttpLLMClient
 from .orchestrator import Orchestrator
-from .samplers import ApiSampler, PromptSampler, SeedQASampler, PersonaSampler
+from .samplers import (
+    ApiSampler,
+    LabelExampleSampler,
+    PersonaSampler,
+    PromptSampler,
+    SeedQASampler,
+)
 from .schemas import QAPair
 from .verification import (
     ExecutionChecker,
@@ -45,6 +51,16 @@ def _build(
     seed_sampler = SeedQASampler(seeds, settings.num_seed_range, rng)
     prompt_sampler = PromptSampler(rng=rng)
 
+    # Opt-in: real (user message -> tool) few-shot examples from a label file.
+    label_sampler = None
+    if settings.label_path:
+        label_sampler = LabelExampleSampler.from_jsonl(
+            settings.label_path,
+            count_range=settings.num_seed_range,
+            valid_tools=set(library.names()),
+            rng=rng,
+        )
+
     generator = QueryAnswerGenerator(
         client, settings.generator_model_name, settings.generation_temperature
     )
@@ -68,11 +84,15 @@ def _build(
         concurrency=settings.concurrency,
         semantic_fail_log_path=semantic_fail_log_path,
         verified_log_path=verified_log_path,
+        label_sampler=label_sampler,
     )
 
 
 async def _run(args) -> None:
     settings = Settings.from_env()
+    # CLI flag overrides the APIGEN_LABEL_FILE env var.
+    if args.fewshot_from_labels:
+        settings.label_path = args.fewshot_from_labels
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # Start a fresh output file, then append verified pairs continuously during the run.
@@ -101,6 +121,11 @@ def main() -> None:
     parser.add_argument("--num", type=int, default=20, help="target verified pairs")
     parser.add_argument("--concurrency", type=int, default=0, help="override concurrency")
     parser.add_argument("--out", default="data/output/verified.jsonl", help="output JSONL path")
+    parser.add_argument(
+        "--fewshot-from-labels",
+        default=None,
+        help="JSONL label file; when set, real (user message -> tool) examples ground the few-shot",
+    )
     parser.add_argument(
         "--semantic-fail-log",
         default="data/output/semantic_rejects.jsonl",

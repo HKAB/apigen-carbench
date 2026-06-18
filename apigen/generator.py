@@ -67,7 +67,10 @@ class QueryAnswerGenerator:
         style: QueryStyle,
         num_pairs: int = 3,
         persona: Persona | None = None,
+        real_examples: list[QAPair] | None = None,
     ) -> list[GeneratorOutput]:
-        messages = build_messages(style, apis, seeds, num_pairs, persona=persona)
+        messages = build_messages(
+            style, apis, seeds, num_pairs, persona=persona, real_examples=real_examples
+        )
         text = await self._client.chat(self._model, messages, self._temperature)
         return parse_generator_output(text)

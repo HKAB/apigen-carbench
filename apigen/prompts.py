@@ -59,6 +59,20 @@ def _format_seeds(seeds: list[QAPair]) -> str:
     )
 
 
+def _format_real_examples(examples: list[QAPair]) -> str:
+    """Render real (user message -> tool) examples as a compact bullet list.
+
+    Only the query and the labelled tool name are shown. Arguments are
+    deliberately omitted (the raw label data has none); the model must still
+    produce the complete function call with arguments per the API spec.
+    """
+    lines = []
+    for ex in examples:
+        tools = ", ".join(a.name for a in ex.answers) or "?"
+        lines.append(f'- "{ex.query}"  → tool: {tools}')
+    return "\n".join(lines)
+
+
 def _format_persona(p: Persona) -> str:
     """Render a Persona into a compact, LLM-readable profile block.
 
@@ -121,6 +135,7 @@ def build_messages(
     seeds: list[QAPair],
     num_pairs: int,
     persona: Persona | None = None,
+    real_examples: list[QAPair] | None = None,
 ) -> list[dict[str, str]]:
     """Build the chat messages for one generation request.
 
@@ -128,7 +143,25 @@ def build_messages(
     section that instructs the LLM to imitate that specific Vietnamese driver,
     producing queries that are authentic to their demographics, vocabulary, and
     cultural context.
+
+    When ``real_examples`` are supplied (real user-message -> tool pairs sampled
+    from a label file), a ``## Real user query examples`` section grounds the
+    generated queries in authentic phrasing for those tools. The examples omit
+    arguments, so the model is reminded to still emit complete function calls.
     """
+    real_block = ""
+    if real_examples:
+        real_block = f"""\n## Real user query examples (authentic phrasing)
+Below are REAL user utterances and the tool each one should call. Imitate their
+natural, authentic Vietnamese phrasing and the variety of intents users express
+for these tools when writing new queries.
+IMPORTANT: these examples show only the tool name, not its arguments. You must
+still output the COMPLETE function call, filling all required arguments per the
+API spec above.
+
+{_format_real_examples(real_examples)}
+"""
+
     persona_block = ""
     if persona is not None:
         persona_block = f"""\n## User Persona
@@ -150,7 +183,7 @@ but not any specific human names, since the car is not a human. Sometimes they j
 
 ## Example query-answer pairs (for style reference)
 {_format_seeds(seeds)}
-{persona_block}
+{real_block}{persona_block}
 ## Task
 {STYLE_INSTRUCTIONS[style]}
 Generate {num_pairs} diverse query-answer pair(s) in this style.

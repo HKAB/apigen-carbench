@@ -39,6 +39,8 @@ class Settings:
     # --- data locations ---
     apis_path: str = "data/apis/car_apis.json"
     seed_path: str = "data/seed/seed_qa.json"
+    # Optional real-label few-shot source (JSONL); None disables the feature.
+    label_path: str | None = None
 
     @classmethod
     def from_env(cls, *, load: bool = True) -> "Settings":
@@ -61,4 +63,5 @@ class Settings:
                 _int("APIGEN_NUM_SEED_MIN", 1),
                 _int("APIGEN_NUM_SEED_MAX", 3),
             ),
+            label_path=os.getenv("APIGEN_LABEL_FILE") or None,
         )
